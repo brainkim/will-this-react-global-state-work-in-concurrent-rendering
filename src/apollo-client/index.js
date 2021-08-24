@@ -1,11 +1,11 @@
 import React from 'react';
 import {
+  ApolloLink,
   ApolloClient,
   gql,
   InMemoryCache,
   ApolloProvider,
   useQuery,
-  makeVar,
 } from '@apollo/client';
 
 import {
@@ -18,43 +18,53 @@ import {
 } from '../common';
 
 const COUNT_QUERY = gql`
-  query CountQuery {
-    count @client
+  query {
+    count
+    dummy
   }
 `;
 
-const currentState = makeVar(initialState);
-
-const client = new ApolloClient({
-  cache: new InMemoryCache({
-    typePolicies: {
-      Query: {
-        fields: {
-          count() {
-            return currentState().count;
-          }
-        }
-      }
-    }
-  })
+const cache = new InMemoryCache();
+cache.writeQuery({
+  query: COUNT_QUERY,
+  data: initialState,
 });
 
-const useCount = () => {
+const client = new ApolloClient({
+  cache,
+  link: ApolloLink.empty(),
+});
+
+function useCount() {
   const { loading, error, data } = useQuery(COUNT_QUERY);
-  return (!loading && !error && data) ? selectCount(data) : 0;
-};
+  if (loading) {
+    throw new Error('Cache miss');
+  } else if (error) {
+    throw error;
+  }
 
-const useIncrement = () => {
-  return () => {
-    return currentState(reducer(currentState(), incrementAction));
-  };
-};
+  return selectCount(data);
+}
 
-const useDouble = () => {
+function useIncrement() {
   return () => {
-    return currentState(reducer(currentState(), doubleAction));
+    const data = cache.readQuery({ query: COUNT_QUERY });
+    cache.writeQuery({
+      query: COUNT_QUERY,
+      data: reducer(data, incrementAction),
+    });
   };
-};
+}
+
+function useDouble() {
+  return () => {
+    const data = cache.readQuery({ query: COUNT_QUERY });
+    cache.writeQuery({
+      query: COUNT_QUERY,
+      data: reducer(data, doubleAction),
+    });
+  };
+}
 
 const Root = ({ children }) => (
   <ApolloProvider client={client}>
