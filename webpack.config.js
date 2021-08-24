@@ -11,7 +11,7 @@ module.exports = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      __DEV__: JSON.stringify(process.env.NODE_ENV !== "production"),
+      __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
     }),
     new webpack.EnvironmentPlugin(['NAME']),
     new HtmlWebpackPlugin({
@@ -33,6 +33,7 @@ module.exports = {
       }],
     }],
   },
+  devtool: 'source-map',
   devServer: {
     port: process.env.PORT || '8080',
     historyApiFallback: true,
